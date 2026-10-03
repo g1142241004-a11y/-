@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDGs性別平權 - 第一關村莊考驗</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Canvas Confetti for Celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', 'Fredoka', sans-serif;
+            background-color: #f0fdf4;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        /* Village Map Background Pattern */
+        .village-bg {
+            background-color: #a7f3d0;
+            background-image: 
+                radial-gradient(#34d399 2px, transparent 2px),
+                radial-gradient(#059669 1px, #a7f3d0 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+        }
+
+        /* Winding Path Effect */
+        .map-container {
+            position: relative;
+            background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+            border-radius: 2rem;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Pulse Animation for Active Houses */
+        @keyframes float-bounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-8px) scale(1.03); }
+        }
+
+        .house-available {
+            animation: float-bounce 3s infinite ease-in-out;
+            cursor: pointer;
+            filter: drop-shadow(0 10px 8px rgba(0, 0, 0, 0.15));
+        }
+
+        .house-available:hover {
+            transform: translateY(-12px) scale(1.08) !important;
+            filter: drop-shadow(0 15px 12px rgba(0, 0, 0, 0.25));
+        }
+
+        /* Pulse aura for unchecked houses */
+        .house-available::after {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            background: rgba(253, 224, 71, 0.4);
+            z-index: -1;
+            animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 0; }
+            100% { transform: scale(0.8); opacity: 0; }
+        }
+
+        /* Modal Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #34d399;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-emerald-200">
+
+    <!-- TOP HEADER BAR -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-emerald-100 shadow-sm px-4 py-3 md:px-8">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
+            <!-- Left Header Title -->
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-tr from-emerald-500 to-teal-400 text-white p-2.5 rounded-2xl shadow-md">
+                    <i class="fa-solid font-bold fa-scale-balanced text-xl md:text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-black bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-800 bg-clip-text text-transparent">
+                        SDGs性別平權
+                    </h1>
+                    <p class="text-xs font-semibold text-emerald-600 tracking-wider">GOAL 5: GENDER EQUALITY</p>
+                </div>
+            </div>
+
+            <!-- Right Status Dashboard -->
+            <div class="flex items-center gap-3 md:gap-6 bg-emerald-50/80 px-4 py-2 rounded-2xl border border-emerald-200/60">
+                <div class="text-right">
+                    <span class="text-xs text-gray-500 font-bold block">已挑戰進度</span>
+                    <span id="progress-text" class="text-sm font-black text-gray-700">0 / 10 題</span>
+                </div>
+                <div class="h-8 w-[2px] bg-emerald-200"></div>
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-500 shadow-inner">
+                        <i class="fa-solid fa-trophy text-lg"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs text-amber-700 font-bold block">目前答對題數</span>
+                        <span id="score-text" class="text-lg font-black text-amber-600">0 / 10</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN VILLAGE MAP AREA -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col items-center justify-center">
+        <!-- Subtitle Prompt -->
+        <div class="w-full text-center mb-4">
+            <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 text-emerald-800 text-sm font-bold shadow-sm border border-emerald-200">
+                <i class="fa-solid fa-map-location-dot text-emerald-500"></i>
+                點擊村莊裡的茅草屋，回答性別平權問題（需答對 8 題以上才能通關喔！）
+            </span>
+        </div>
+
+        <!-- Village Interactive Map Container -->
+        <div class="map-container w-full h-[620px] md:h-[680px] relative overflow-hidden border-4 border-white shadow-2xl">
+            <!-- SVG Map Decorative Background Elements -->
+            <svg class="absolute inset-0 w-full h-full pointer-events-none opacity-40" xmlns="http://www.w3.org/2000/svg">
+                <!-- Winding Path -->
+                <path d="M 80 100 Q 250 50, 400 150 T 700 220 T 350 400 T 800 520" fill="none" stroke="#fef3c7" stroke-width="36" stroke-linecap="round"/>
+                <path d="M 80 100 Q 250 50, 400 150 T 700 220 T 350 400 T 800 520" fill="none" stroke="#fde68a" stroke-width="28" stroke-linecap="round" stroke-dasharray="12 8"/>
+                
+                <!-- River -->
+                <path d="M 0 320 C 300 280, 500 450, 1000 350" fill="none" stroke="#38bdf8" stroke-width="24" opacity="0.7"/>
+                <path d="M 0 320 C 300 280, 500 450, 1000 350" fill="none" stroke="#bae6fd" stroke-width="12" opacity="0.8"/>
+            </svg>
+
+            <!-- Decorative Trees & Flowers spread in Village -->
+            <div class="absolute top-12 left-10 text-emerald-700/40 text-4xl pointer-events-none"><i class="fa-solid fa-tree"></i></div>
+            <div class="absolute top-8 left-20 text-emerald-800/30 text-3xl pointer-events-none"><i class="fa-solid fa-tree"></i></div>
+            <div class="absolute top-1/3 right-12 text-emerald-700/40 text-5xl pointer-events-none"><i class="fa-solid fa-tree"></i></div>
+            <div class="absolute bottom-20 left-16 text-emerald-700/40 text-5xl pointer-events-none"><i class="fa-solid fa-tree"></i></div>
+            <div class="absolute bottom-10 right-1/3 text-emerald-800/30 text-4xl pointer-events-none"><i class="fa-solid fa-tree"></i></div>
+            
+            <!-- Bridge over River -->
+            <div class="absolute top-[48%] left-[42%] text-amber-800 text-3xl pointer-events-none transform -rotate-12">
+                <i class="fa-solid fa-bridge"></i>
+            </div>
+
+            <!-- Houses Container (10 Houses placed dynamically via JS or absolute CSS) -->
+            <div id="houses-grid" class="relative w-full h-full">
+                <!-- 10 Houses will be generated dynamically with positions -->
+            </div>
+        </div>
+    </main>
+
+    <!-- QUESTION MODAL DIALOG -->
+    <div id="question-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="glass-panel w-full max-w-2xl rounded-3xl p-6 md:p-8 shadow-2xl border border-white transform scale-95 transition-all duration-300 relative overflow-hidden" id="modal-card">
+            
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span id="modal-house-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                        茅草屋 #1
+                    </span>
+                    <span class="text-xs font-bold text-gray-400">SDGs 5 性別平權議題</span>
+                </div>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Question Title -->
+            <h3 id="question-text" class="text-lg md:text-xl font-black text-gray-800 mb-6 leading-relaxed">
+                題目載入中...
+            </h3>
+
+            <!-- Options List (4 Buttons) -->
+            <div id="options-container" class="grid grid-cols-1 gap-3 mb-6">
+                <!-- Dynamically populated options -->
+            </div>
+
+            <!-- Knowledge Explanation Box (Hidden initially) -->
+            <div id="explanation-box" class="hidden p-4 rounded-2xl mb-4 text-sm leading-relaxed transition-all duration-300">
+                <!-- Explanation content -->
+            </div>
+
+            <!-- Modal Action Footer -->
+            <div class="flex justify-end">
+                <button id="next-question-btn" class="hidden px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold shadow-md hover:shadow-lg transition transform active:scale-95">
+                    確定並繼續 <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME RESULT OVERLAY MODAL (Pass/Fail) -->
+    <div id="result-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-500">
+        <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl text-center transform scale-90 transition-all duration-300 relative border-4 border-emerald-100">
+            <!-- Icon Result -->
+            <div id="result-icon-container" class="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center text-5xl shadow-lg">
+                <!-- Dynamic Icon -->
+            </div>
+
+            <h2 id="result-title" class="text-2xl md:text-3xl font-black text-gray-800 mb-2">
+                挑戰結果
+            </h2>
+
+            <p id="result-score-detail" class="text-lg font-bold text-emerald-600 mb-4">
+                答對 0 / 10 題
+            </p>
+
+            <p id="result-description" class="text-sm text-gray-600 leading-relaxed mb-8">
+                說明內容...
+            </p>
+
+            <!-- Dynamic Action Buttons -->
+            <div id="result-actions" class="flex justify-center gap-4">
+                <!-- Retry or Level 2 Button -->
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="py-3 text-center text-xs text-gray-500 font-medium">
+        SDGs Goal 5 性別平權互動遊戲 &copy; 2026 - 引導村莊走向平等與尊重
+    </footer>
+
+    <script>
+        /* ==========================================================================
+           1. QUESTION BANK (SDGs Goal 5 Gender Equality - 10 Questions)
+           ========================================================================== */
+        const questionsData = [
+            {
+                id: 1,
+                title: "1. 關於家庭家務分工，下列哪一種觀念最符合現代「性別平權」的精神？",
+                options: [
+                    "A. 家務事是女性的本份，男性只需要負責賺錢即可",
+                    "B. 家務與育兒是全家人的事，應由家庭成員依能力共同分擔",
+                    "C. 只有沒工作的成員才需要做家務",
+                    "D. 男性做家務是一種「幫忙」，值得額外大力讚賞"
+                ],
+                correct: 1,
+                explanation: "💡 **解說**：家務與照顧責任不應受性別刻板印象限制。SDGs 5.4 強調應認可並重視無償照顧和家務勞動，鼓勵家庭成員共同分擔。"
+            },
+            {
+                id: 2,
+                title: "2. 在職場中，若男女員工擔任相同職務且績效相當，雇主應該如何處理薪資？",
+                options: [
+                    "A. 考量男性通常需要負擔家計，應給予較高薪資",
+                    "B. 考量女性可能會生育請假，應給予較低薪資",
+                    "C. 應落實「同工同酬」，不因性別而給予不同薪資待遇",
+                    "D. 薪資給付全憑雇主喜好，與性別平等無關"
+                ],
+                correct: 2,
+                explanation: "💡 **解說**：同工同酬是 basic 人權！SDGs 5 致力於消除職場性別歧視，保障男女享有平等的經濟資源與薪資報酬。"
+            },
+            {
+                id: 3,
+                title: "3. 當看到有男同學喜歡玩洋娃娃、女同學喜歡組裝機器人時，我們應該抱持什麼態度？",
+                options: [
+                    "A. 嘲笑男同學太軟弱、女同學太粗魯",
+                    "B. 尊重並支持每個人的興趣與喜好，不以性別框架限制他人",
+                    "C. 強制要求他們換回符合傳統性別標準的玩具",
+                    "D. 認為這是心理不健康的表現，給予輔導"
+                ],
+                correct: 1,
+                explanation: "💡 **解說**：玩具與興趣沒有性別之分！打破性別刻板印象能讓每個人自由發揮潛能與興趣。"
+            },
+            {
+                id: 4,
+                title: "4. 下列何者屬於「數位性別暴力」的範疇？",
+                options: [
+                    "A. 在網路上公開分享性別平權文章",
+                    "B. 未經同意散布或威脅散布私密照片/影片",
+                    "C. 參與線上的性別平等研討會",
+                    "D. 在社群媒體關注性別倡議團體"
+                ],
+                correct: 1,
+                explanation: "💡 **解說**：未經同意散布私密影像嚴重侵犯隱私與尊嚴，屬於數位性別暴力，法律已明文禁止與處罰。"
+            },
+            {
+                id: 5,
+                title: "5. 在政治與社會決策中，提高女性參政與領導階層的比率有何重要性？",
+                options: [
+                    "A. 只是為了好看的數據，對實際政策沒有影響",
+                    "B. 能融入多元視角，促進更全面公平的社會決策",
+                    "C. 會導致男性權益全面受損",
+                    "D. 政治只適合男性，女性不宜參與"
+                ],
+                correct: 1,
+                explanation: "💡 **解說**：SDGs 5.5 指出，確保女性在政治、經濟及公共事務的所有決策層級中，擁有完整有效的參與及平等領導機會。"
+            },
+            {
+                id: 6,
+                title: "6. 「童婚」與「強制婚姻」對女孩會造成什麼嚴重的負面影響？",
+                options: [
+                    "A. 能讓女孩提早獲得經濟獨立",
+                    "B. 剝奪受教育機會、增加健康風險與過早生育風險",
+                    "C. 有助於改善當地社區的整體經濟",
+                    "D. 對女孩沒有任何影響"
+                ],
+                correct: 1,
+                explanation: "💡 **解說**：SDGs 5.3 旨在消除童婚、早婚與強迫婚姻等所有有害習俗，保障女孩的受教育權與健康權。"
+            },
+            {
+                id: 7,
+                title: "7. 關於多元性別（LGBTQ+）與性別認同，下列敘述何者正確？",
+                options: [
+                    "A. 所有人應該強制遵守傳統的男女二元標準",
+                    "B. 每個人都擁有選擇與表達自身性別認同的權利，應獲得同等尊重",
+                    "C. 多元性別只是一種流行趨勢，不需要特別關心",
+                    "D. 應排斥與自己性別認同不同的人"
+                ],
+                correct: 1,
+                explanation: "💡 **解說**：性別平權包含對多元性別氣質與認同的包容與尊重，人人皆應享有不受歧視的基本權利。"
+            },
+            {
+                id: 8,
+                title: "8. 當有人在職場或學校遭遇「性騷擾」時，適當的處理管道不包括下列何者？",
+                options: [
+                    "A. 向學校性平會、企業申訴管道或警方尋求協助",
+                    "B. 默默忍受，為了大局著想不要張揚",
+                    "C. 保存相關證據（如對話紀錄、錄音）以備申訴",
+                    "D. 向信任的專業心理諮商師或社工求助"
+                ],
+                correct: 1,
+                explanation: "💡 **解說**：遇到性騷擾絕不應默默忍耐！勇敢發聲並透過正式申訴管道求助，能保護自己與他人。"
+            },
+            {
+                id: 9,
+                title: "9. 關於「科技、工程與數學（STEM）」領域的發展，下列何者正確？",
+                options: [
+                    "A. 女性的大腦結構不適合學習科技與工程領域",
+                    "B. 應鼓勵女孩與女性參與 STEM 領域，打破性別領域藩籬",
+                    "C. 只有男性才能成為優秀的科學家與工程師",
+                    "D. 女性只適合從事人文與藝術領域"
+                ],
+                correct: 1,
+                explanation: "💡 **解說**：能力無分性別！鼓勵女性進入 STEM 領域是全球落實性別平權與激發創新發展的重要目標。"
+            },
+            {
+                id: 10,
+                title: "10. 為何說「性別平權」不僅照顧女性，對男性也有好處？",
+                options: [
+                    "A. 性別平權對男性沒有任何好處",
+                    "B. 能減輕傳統「男兒有淚不輕彈/獨自扛家計」的刻板壓力，讓每個人自由表達情感",
+                    "C. 能讓男性獲得更多特權",
+                    "D. 能讓男性不用承擔任何社會責任"
+                ],
+                correct: 1,
+                explanation: "💡 **解說**：性別平權解放了所有人！它打破傳統對男性的剛強枷鎖，讓男性也能安心表達脆弱與享受家庭樂趣。"
+            }
+        ];
+
+        // Coordinates for placing 10 Houses nicely across the village path
+        const housePositions = [
+            { top: '12%', left: '15%' },
+            { top: '8%',  left: '45%' },
+            { top: '15%', left: '75%' },
+            { top: '35%', left: '82%' },
+            { top: '32%', left: '22%' },
+            { top: '55%', left: '12%' },
+            { top: '58%', left: '48%' },
+            { top: '52%', left: '80%' },
+            { top: '78%', left: '28%' },
+            { top: '75%', left: '72%' }
+        ];
+
+        // House Colors and Icons
+        const houseIcons = [
+            "fa-house-chimney-window", "fa-house-user", "fa-house-flag",
+            "fa-house-lock", "fa-house-heart", "fa-house-medical",
+            "fa-house-crack", "fa-house-laptop", "fa-house-circle-check", "fa-house-crown"
+        ];
+
+        // State Tracking
+        let houseStates = Array(10).fill('unanswered'); // 'unanswered', 'correct', 'wrong'
+        let currentActiveHouseIndex = null;
+        let score = 0;
+        let answeredCount = 0;
+
+        /* ==========================================================================
+           2. AUDIO SYNTHESIZER (Tone.js Sound Effects)
+           ========================================================================== */
+        let synth = null;
+        function initAudio() {
+            if (!synth && typeof Tone !== 'undefined') {
+                synth = new Tone.Synth().toDestination();
+            }
+        }
+
+        function playSound(type) {
+            try {
+                initAudio();
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                if (type === 'click') {
+                    synth.triggerAttackRelease("C5", "8n");
+                } else if (type === 'correct') {
+                    const now = Tone.now();
+                    synth.triggerAttackRelease("E5", "8n", now);
+                    synth.triggerAttackRelease("G5", "8n", now + 0.1);
+                    synth.triggerAttackRelease("C6", "4n", now + 0.2);
+                } else if (type === 'wrong') {
+                    const now = Tone.now();
+                    synth.triggerAttackRelease("A3", "8n", now);
+                    synth.triggerAttackRelease("F3", "4n", now + 0.15);
+                } else if (type === 'win') {
+                    const poly = new Tone.PolySynth().toDestination();
+                    poly.triggerAttackRelease(["C5", "E5", "G5", "C6"], "2n");
+                }
+            } catch(e) {
+                // Audio fallback silence
+            }
+        }
+
+        /* ==========================================================================
+           3. MAP RENDER & HOUSES GENERATION
+           ========================================================================== */
+        const housesGrid = document.getElementById('houses-grid');
+
+        function renderVillageMap() {
+            housesGrid.innerHTML = '';
+
+            questionsData.forEach((q, index) => {
+                const pos = housePositions[index];
+                const state = houseStates[index];
+
+                // Main House Wrapper
+                const houseEl = document.createElement('div');
+                houseEl.className = `absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group ${
+                    state === 'unanswered' ? 'house-available' : 'cursor-default'
+                }`;
+                houseEl.style.top = pos.top;
+                houseEl.style.left = pos.left;
+
+                // Straw Hut SVG Structure & Icon
+                let statusBadge = '';
+                let borderStyle = 'border-amber-300 bg-amber-50';
+
+                if (state === 'correct') {
+                    statusBadge = `<div class="absolute -top-2 -right-2 bg-emerald-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-lg animate-bounce"><i class="fa-solid fa-check"></i></div>`;
+                    borderStyle = 'border-emerald-400 bg-emerald-100 opacity-90';
+                } else if (state === 'wrong') {
+                    statusBadge = `<div class="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-lg"><i class="fa-solid fa-xmark"></i></div>`;
+                    borderStyle = 'border-rose-300 bg-slate-100 opacity-70 grayscale';
+                }
+
+                houseEl.innerHTML = `
+                    <div class="relative">
+                        ${statusBadge}
+                        <!-- Cute Straw Hut Roof Canvas/SVG -->
+                        <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl border-4 ${borderStyle} shadow-lg flex flex-col items-center justify-center transition-all duration-300">
+                            <!-- Roof SVG Graphic -->
+                            <svg class="w-10 h-6 -mt-2 text-amber-700" viewBox="0 0 40 24" fill="currentColor">
+                                <path d="M20 0 L40 20 L35 24 L20 8 L5 24 L0 20 Z" />
+                                <path d="M20 3 L36 19 L32 20 L20 9 L8 20 L4 19 Z" fill="#d97706"/>
+                            </svg>
+                            <i class="fa-solid ${houseIcons[index]} text-lg md:text-2xl text-amber-800 my-0.5"></i>
+                        </div>
+                    </div>
+                    <!-- House Label Banner -->
+                    <span class="mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-white/90 text-amber-900 shadow-sm border border-amber-200">
+                        茅草屋 #${index + 1}
+                    </span>
+                `;
+
+                // Click event listener
+                if (state === 'unanswered') {
+                    houseEl.addEventListener('click', () => {
+                        playSound('click');
+                        openQuestionModal(index);
+                    });
+                }
+
+                housesGrid.appendChild(houseEl);
+            });
+        }
+
+        /* ==========================================================================
+           4. MODAL & QUESTION LOGIC
+           ========================================================================== */
+        const questionModal = document.getElementById('question-modal');
+        const modalCard = document.getElementById('modal-card');
+        const modalBadge = document.getElementById('modal-house-badge');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const explanationBox = document.getElementById('explanation-box');
+        const nextQuestionBtn = document.getElementById('next-question-btn');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        function openQuestionModal(index) {
+            currentActiveHouseIndex = index;
+            const q = questionsData[index];
+
+            modalBadge.innerText = `茅草屋 #${index + 1}`;
+            questionText.innerText = q.title;
+
+            // Reset UI
+            optionsContainer.innerHTML = '';
+            explanationBox.classList.add('hidden');
+            explanationBox.className = 'hidden p-4 rounded-2xl mb-4 text-sm leading-relaxed transition-all duration-300';
+            nextQuestionBtn.classList.add('hidden');
+
+            // Render Options
+            q.options.forEach((opt, optIdx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-2xl border-2 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/50 font-medium text-gray-700 transition-all flex items-center justify-between group active:scale-[0.99]";
+                btn.innerHTML = `
+                    <span>${opt}</span>
+                    <i class="fa-regular fa-circle text-gray-300 group-hover:text-emerald-500 text-lg"></i>
+                `;
+
+                btn.addEventListener('click', () => handleAnswerSelect(optIdx, btn));
+                optionsContainer.appendChild(btn);
+            });
+
+            // Show Modal with Animation
+            questionModal.classList.remove('opacity-0', 'pointer-events-none');
+            modalCard.classList.remove('scale-95');
+            modalCard.classList.add('scale-100');
+        }
+
+        function handleAnswerSelect(selectedOptionIdx, selectedBtn) {
+            const q = questionsData[currentActiveHouseIndex];
+            const isCorrect = (selectedOptionIdx === q.correct);
+
+            // Disable all option buttons
+            const allBtns = optionsContainer.querySelectorAll('button');
+            allBtns.forEach(btn => btn.style.pointerEvents = 'none');
+
+            // Style Option Buttons
+            allBtns.forEach((btn, idx) => {
+                if (idx === q.correct) {
+                    btn.className = "w-full text-left p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-100 text-emerald-900 font-bold flex items-center justify-between";
+                    btn.querySelector('i').className = "fa-solid fa-circle-check text-emerald-600 text-xl";
+                } else if (idx === selectedOptionIdx && !isCorrect) {
+                    btn.className = "w-full text-left p-4 rounded-2xl border-2 border-rose-400 bg-rose-100 text-rose-900 font-bold flex items-center justify-between";
+                    btn.querySelector('i').className = "fa-solid fa-circle-xmark text-rose-500 text-xl";
+                } else {
+                    btn.className += " opacity-50";
+                }
+            });
+
+            // Update State
+            answeredCount++;
+            if (isCorrect) {
+                score++;
+                houseStates[currentActiveHouseIndex] = 'correct';
+                playSound('correct');
+                explanationBox.className = "p-4 rounded-2xl mb-4 text-sm leading-relaxed bg-emerald-50 border border-emerald-200 text-emerald-900";
+            } else {
+                houseStates[currentActiveHouseIndex] = 'wrong';
+                playSound('wrong');
+                explanationBox.className = "p-4 rounded-2xl mb-4 text-sm leading-relaxed bg-rose-50 border border-rose-200 text-rose-900";
+            }
+
+            // Show Knowledge Explanation
+            explanationBox.innerHTML = q.explanation;
+            explanationBox.classList.remove('hidden');
+
+            // Update Top Bar Indicators
+            document.getElementById('score-text').innerText = `${score} / 10`;
+            document.getElementById('progress-text').innerText = `${answeredCount} / 10 題`;
+
+            // Show Next Button
+            nextQuestionBtn.classList.remove('hidden');
+        }
+
+        function closeQuestionModal() {
+            questionModal.classList.add('opacity-0', 'pointer-events-none');
+            modalCard.classList.remove('scale-100');
+            modalCard.classList.add('scale-95');
+
+            renderVillageMap();
+
+            // Check if all 10 questions completed
+            if (answeredCount >= 10) {
+                setTimeout(showEndGameResult, 600);
+            }
+        }
+
+        nextQuestionBtn.addEventListener('click', closeQuestionModal);
+        closeModalBtn.addEventListener('click', closeQuestionModal);
+
+        /* ==========================================================================
+           5. GAME OVER EVALUATION & RESULT MODAL
+           ========================================================================== */
+        const resultModal = document.getElementById('result-modal');
+        const resultIconContainer = document.getElementById('result-icon-container');
+        const resultTitle = document.getElementById('result-title');
+        const resultScoreDetail = document.getElementById('result-score-detail');
+        const resultDescription = document.getElementById('result-description');
+        const resultActions = document.getElementById('result-actions');
+
+        function navigateToLevel2() {
+            try {
+                if (window.location.protocol.startsWith('http') || window.location.protocol.startsWith('file')) {
+                    window.location.href = 'level2.html';
+                } else {
+                    showToast("已成功觸發前往第二關指令！正式部署後將跳轉至 level2.html。");
+                }
+            } catch (e) {
+                showToast("已成功觸發前往第二關指令！");
+            }
+        }
+
+        function restartGame() {
+            houseStates = Array(10).fill('unanswered');
+            currentActiveHouseIndex = null;
+            score = 0;
+            answeredCount = 0;
+
+            document.getElementById('score-text').innerText = '0 / 10';
+            document.getElementById('progress-text').innerText = '0 / 10 題';
+
+            resultModal.classList.add('opacity-0', 'pointer-events-none');
+            renderVillageMap();
+        }
+
+        function showToast(message) {
+            let toast = document.getElementById('game-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'game-toast';
+                toast.className = 'fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-slate-800 text-white px-6 py-3 rounded-2xl shadow-xl text-sm font-bold opacity-0 transition-opacity duration-300 pointer-events-none';
+                document.body.appendChild(toast);
+            }
+            toast.innerText = message;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        function showEndGameResult() {
+            resultScoreDetail.innerText = `本次答對 ${score} / 10 題`;
+
+            if (score >= 8) {
+                // Success / Pass Case
+                playSound('win');
+                triggerConfetti();
+
+                resultIconContainer.className = "w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center text-5xl shadow-lg bg-emerald-100 text-emerald-600 border-4 border-emerald-300";
+                resultIconContainer.innerHTML = `<i class="fa-solid fa-award"></i>`;
+
+                resultTitle.innerText = "恭喜順利通關！";
+                resultTitle.className = "text-2xl md:text-3xl font-black text-emerald-700 mb-2";
+
+                resultDescription.innerText = "太厲害了！你成功解答了村莊裡的性別平權疑問，帶領村莊邁向平權與包容！準備好前往下一關接受更多挑戰了嗎？";
+
+                resultActions.innerHTML = `
+                    <button id="go-level2-btn" class="w-full px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black shadow-lg hover:shadow-xl transition transform active:scale-95 flex items-center justify-center gap-2 text-base">
+                        <i class="fa-solid fa-circle-play"></i> 前往下一關 (Level 2)
+                    </button>
+                `;
+                document.getElementById('go-level2-btn').onclick = navigateToLevel2;
+            } else {
+                // Fail Case (< 8 marks)
+                playSound('wrong');
+
+                resultIconContainer.className = "w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center text-5xl shadow-lg bg-amber-100 text-amber-600 border-4 border-amber-300";
+                resultIconContainer.innerHTML = `<i class="fa-solid fa-rotate-right"></i>`;
+
+                resultTitle.innerText = "挑戰失敗！";
+                resultTitle.className = "text-2xl md:text-3xl font-black text-amber-800 mb-2";
+
+                resultDescription.innerText = "性別平權觀念需要再加油喔～村莊裡還有一些關於平權的誤解需要你來幫忙釐清。別灰心，重新挑戰一次吧！";
+
+                resultActions.innerHTML = `
+                    <button id="restart-game-btn" class="w-full px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-black shadow-lg hover:shadow-xl transition transform active:scale-95 flex items-center justify-center gap-2 text-base">
+                        <i class="fa-solid fa-arrows-rotate"></i> 重新挑戰
+                    </button>
+                `;
+                document.getElementById('restart-game-btn').onclick = restartGame;
+            }
+
+            resultModal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        // Celebration Confetti Effect
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        /* ==========================================================================
+           6. INITIALIZATION
+           ========================================================================== */
+        window.addEventListener('DOMContentLoaded', () => {
+            renderVillageMap();
+        });
+    </script>
+</body>
+</html>
